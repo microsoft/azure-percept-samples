@@ -160,6 +160,7 @@ bool ONNXSSDModel::pull_data(cv::GStreamingCompiled &pipeline){
     std::vector<int>      last_labels;
     std::vector<float>    last_confidences;
     cv::Mat last_bgr;
+    int64_t last_bgr_timestamp;
 
     // Pull the data from the pipeline while it is running
     while (pipeline.pull(std::move(pipeline_outputs)))
@@ -168,12 +169,12 @@ bool ONNXSSDModel::pull_data(cv::GStreamingCompiled &pipeline){
         {
             this->handle_inference_output(out_bgr_ts, out_bgr_seqno, out_boxes, out_labels, out_confidences, out_size, last_boxes, last_labels, last_confidences);
         }
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_boxes, last_labels, last_confidences);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_boxes, last_labels, last_confidences);
 
         if (this->restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }

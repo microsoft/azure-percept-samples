@@ -3,6 +3,7 @@
 
 // Standard library includes
 #include <chrono>
+#include <deque>
 #include <thread>
 
 // Local includes
@@ -18,7 +19,8 @@
 namespace rtsp {
 
 FrameBuffer::FrameBuffer(size_t max_length, int fps)
-    : circular_buffer(max_length), cached_frame(DEFAULT_HEIGHT, DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0)),
+    : circular_buffer(max_length), last_n_timestamps({}),
+      cached_frame(DEFAULT_HEIGHT, DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0)),
       fps(fps), fps_thread( std::thread([this]{this->periodically_update_frame();}) )
 {
 }
@@ -63,12 +65,54 @@ cv::Mat FrameBuffer::get(const Resolution &resolution)
     return ret;
 }
 
-void FrameBuffer::put(const cv::Mat &frame)
+void FrameBuffer::put(const cv::Mat &frame, int64_t timestamp)
 {
     // Writers block until they put a frame into the buffer, but nobody actually blocks reading
     // from the buffer in this design, so we should always succeed without waiting.
     // Unless in the future we re-use this class for some other purpose or have multiple writers.
     this->circular_buffer.put(frame);
+
+    // Update the last N timestamps
+    static const size_t n_timestamps = 10;
+    this->last_n_timestamps.push_back(timestamp);
+    if (this->last_n_timestamps.size() > n_timestamps)
+    {
+        this->last_n_timestamps.pop_front();
+    }
+
+    // If there aren't 2 or more values in the timestamp buffer, we can't calculate our new FPS.
+    if (this->last_n_timestamps.size() >= 2)
+    {
+        // Get the first and the last timestamp in the buffer
+        auto ts0 = this->last_n_timestamps.at(0);
+        auto ts1 = this->last_n_timestamps.at(this->last_n_timestamps.size() - 1);
+
+        // If the most recent timestamp is older than the oldest timestamp, that's odd. Write an error and ignore.
+        if (ts1 < ts0)
+        {
+            util::log_error("Most recent timestamp in framebuffer (" + std::to_string(ts1) + ") is older than the one we though is the oldest (" + std::to_string(ts0) + ")");
+            return;
+        }
+
+        // Otherwise, calculate the average rate of incoming frames. That's our new FPS.
+        auto total_time_ns = ts1 - ts0;
+
+        // But make sure that the total_time_ns is not bogus, or we will go to sleep for a super long time and the video frames will freeze.
+        static const double a_day_in_ns = 8.64e13;
+        if (total_time_ns > a_day_in_ns)
+        {
+            util::log_error("Calculated a time delta between most recent timestamp and oldest one of greater than a day. One of the timestamps is bogus. Ignoring.");
+            return;
+        }
+
+        double total_time_s = (double)total_time_ns / (double)1E9;
+        double new_fps = (double)(this->last_n_timestamps.size() - 1) / (double)total_time_s;
+        this->fps.exchange(new_fps);
+
+        #ifdef DEBUG_TIME_ALIGNMENT
+            util::log_debug("FPS: " + std::to_string(new_fps));
+        #endif
+    }
 }
 
 void FrameBuffer::periodically_update_frame()
@@ -115,11 +159,6 @@ size_t FrameBuffer::room() const
     {
         return capacity - size;
     }
-}
-
-void FrameBuffer::set_fps(int fps)
-{
-    this->fps.exchange(fps);
 }
 
 } // namespace rtsp

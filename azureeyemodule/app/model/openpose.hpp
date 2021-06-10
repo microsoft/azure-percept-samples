@@ -70,9 +70,10 @@ private:
      *                 which case we immediately return from this method.
      * @param bgr_ts: The timestamp of out_bgr.
      * @param last_bgr: We cache out_bgr into this for use in other methods.
+     * @param last_bgr_timestamp: We cache bgr_ts in this value.
      * @param poses: The latest poses to use if we are not time aligning the result frames.
      */
-    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, const std::vector<pose::HumanPose> &poses);
+    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp, const std::vector<pose::HumanPose> &poses);
 
     /** Compose the RGB based on the poses. */
     void preview(cv::Mat &bgr, const std::vector<pose::HumanPose> &poses) const;

@@ -75,10 +75,11 @@ private:
      *                 which case we immediately return from this method.
      * @param bgr_ts: The timestamp of out_bgr.
      * @param last_bgr: We cache out_bgr into this for use in other methods.
+     * @param last_bgr_timestamp: We cache bgr_ts in this value.
      * @param last_labels: The latest neural network output label(s) to use in marking up the RTSP stream if we are not time aligning.
      * @param last_confidences: The latest neural network output confidence(s) to use in marking up the RTSP stream if we are not time aligning.
      */
-    void handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr,
+    void handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp,
                            const std::vector<int> &last_labels, const std::vector<float> &last_confidences);
 
     /** Marks up the given rgb with the given labels and confidences. */

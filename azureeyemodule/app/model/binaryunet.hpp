@@ -70,9 +70,10 @@ private:
      *                 which case we immediately return from this method.
      * @param bgr_ts: The timestamp of out_bgr.
      * @param last_bgr: We cache out_bgr into this for use in other methods.
+     * @param last_bgr_timestamp: We cache bgr_ts in this value.
      * @param last_mask: The latest neural network output mask to use in marking up the RTSP stream if we are not time aligning.
      */
-    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, const cv::Mat &last_mask);
+    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp, const cv::Mat &last_mask);
 
     /** Draws segmented output onto the given frame using the given mask. */
     void preview(cv::Mat& rgb, const cv::Mat& last_mask) const;

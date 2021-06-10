@@ -79,10 +79,11 @@ private:
      *                 which case we immediately return from this method.
      * @param bgr_ts: The timestamp of out_bgr.
      * @param last_bgr: We cache out_bgr into this for use in other methods.
+     * @param last_bgr_timestamp: We cache bgr_ts in this value.
      * @param last_rcs: The latest output rectangles that we use to mark up the frame if we are not time aligning.
      * @param last_text: The latest decoded strings to use to mark up the frame if we are not time aligning.
      */
-    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr,
+    void handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp,
                            const std::vector<cv::RotatedRect> &last_rcs, const std::vector<std::string> &last_text);
 
     /** Draws the given rectangles and texts onto the frame. */

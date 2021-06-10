@@ -127,7 +127,7 @@ protected:
     volatile bool restarting = false;
 
     /** Cleanup after ourselves */
-    void cleanup(cv::GStreamingCompiled &pipeline, const cv::Mat &last_bgr);
+    void cleanup(cv::GStreamingCompiled &pipeline, const cv::Mat &last_bgr, int64_t last_bgr_timestamp);
 
     /** Write the H264 outputs to a file if videofile is non-empty and we have a result ready in the out_264 node. Also writes to the RTSP feed. */
     void handle_h264_output(cv::optional<std::vector<uint8_t>> &out_h264, const cv::optional<int64_t> &out_h264_ts, const cv::optional<int64_t> &out_h264_seqno, std::ofstream &ofs) const;

@@ -61,6 +61,7 @@ bool ObjectDetector::pull_data(cv::GStreamingCompiled &pipeline)
     std::vector<int> last_labels;
     std::vector<float> last_confidences;
     cv::Mat last_bgr;
+    int64_t last_bgr_timestamp;
 
     // If the user wants to record a video, we open the video file.
     std::ofstream ofs;
@@ -76,12 +77,12 @@ bool ObjectDetector::pull_data(cv::GStreamingCompiled &pipeline)
     {
         this->handle_h264_output(out_h264, out_h264_ts, out_h264_seqno, ofs);
         this->handle_inference_output(out_nn_ts, out_nn_seqno, out_boxes, out_labels, out_confidences, out_size, last_boxes, last_labels, last_confidences);
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_boxes, last_labels, last_confidences);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_boxes, last_labels, last_confidences);
 
         if (this->restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }
@@ -207,8 +208,8 @@ void ObjectDetector::preview(cv::Mat &rgb, const std::vector<cv::Rect> &boxes, c
     }
 }
 
-void ObjectDetector::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr, const std::vector<cv::Rect> &last_boxes,
-                                       const std::vector<int> &last_labels, const std::vector<float> &last_confidences)
+void ObjectDetector::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp,
+                                       const std::vector<cv::Rect> &last_boxes, const std::vector<int> &last_labels, const std::vector<float> &last_confidences)
 {
     if (!out_bgr.has_value())
     {
@@ -220,6 +221,7 @@ void ObjectDetector::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv:
 
     // Now that we got a useful value, let's cache it for later.
     last_bgr = *out_bgr;
+    last_bgr_timestamp = *out_bgr_ts;
 
     // Mark up this frame with our preview function.
     cv::Mat marked_up_bgr;

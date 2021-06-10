@@ -600,7 +600,7 @@ void* gst_rtsp_server_thread(void *unused)
     return NULL;
 }
 
-static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, FrameBuffer &buffer)
+static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps, FrameBuffer &buffer)
 {
     // If we have too many frames to put into the buffer,
     // we will overflow our buffer, leading to jumps in time.
@@ -629,7 +629,7 @@ static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, FrameBuffer &b
         {
             if ((i % n) == 0)
             {
-                buffer.put(mats.at(i));
+                buffer.put(mats.at(i), timestamps.at(i));
                 taken++;
             }
 
@@ -649,24 +649,24 @@ static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, FrameBuffer &b
     }
 }
 
-void update_data_raw(const cv::Mat &mat)
+void update_data_raw(const cv::Mat &mat, int64_t timestamp)
 {
-    update_data_raw(std::vector<cv::Mat>{mat});
+    update_data_raw(std::vector<cv::Mat>{mat}, std::vector<int64_t>{timestamp});
 }
 
-void update_data_raw(const std::vector<cv::Mat> &mats)
+void update_data_raw(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps)
 {
-    add_bunch_of_frames(mats, raw_buffer);
+    add_bunch_of_frames(mats, timestamps, raw_buffer);
 }
 
-void update_data_result(const cv::Mat &mat)
+void update_data_result(const cv::Mat &mat, int64_t timestamp)
 {
-    update_data_result(std::vector<cv::Mat>{mat});
+    update_data_result(std::vector<cv::Mat>{mat}, std::vector<int64_t>{timestamp});
 }
 
-void update_data_result(const std::vector<cv::Mat> &mats)
+void update_data_result(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps)
 {
-    add_bunch_of_frames(mats, result_buffer);
+    add_bunch_of_frames(mats, timestamps, result_buffer);
 }
 
 void update_data_h264(const H264 &frame)

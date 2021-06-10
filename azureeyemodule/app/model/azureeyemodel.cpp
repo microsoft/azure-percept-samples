@@ -23,7 +23,7 @@ namespace model {
 
 AzureEyeModel::AzureEyeModel(const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution)
     : modelfiles(modelfpaths), mvcmd(mvcmd), videofile(videofile), resolution(resolution),
-      timestamped_frames({cv::Mat(rtsp::DEFAULT_HEIGHT, rtsp::DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0))}),
+      timestamped_frames({cv::Mat(rtsp::DEFAULT_HEIGHT, rtsp::DEFAULT_WIDTH, CV_8UC3, cv::Scalar(0, 0, 0))}, 1577931508), // Thursday, January 2nd, 2020 for no great reason
       inference_logger({})
 {
     // Nothing to do
@@ -135,12 +135,12 @@ void AzureEyeModel::stream_frames(const cv::Mat &raw_frame, const cv::Mat &resul
         this->timestamped_frames.put(std::make_tuple(frame_to_mark_up_later, frame_ts));
 
         // Add status message to the raw frame that we send out right now though.
-        rtsp::update_data_raw(new_raw_frame);
+        rtsp::update_data_raw(new_raw_frame, frame_ts);
     }
     else
     {
-        rtsp::update_data_raw(new_raw_frame);
-        rtsp::update_data_result(new_result_frame);
+        rtsp::update_data_raw(new_raw_frame, frame_ts);
+        rtsp::update_data_result(new_result_frame, frame_ts);
     }
 }
 
@@ -436,12 +436,12 @@ bool AzureEyeModel::load_manifest(const std::string &manifestfpath, std::vector<
     return true;
 }
 
-void AzureEyeModel::cleanup(cv::GStreamingCompiled &pipeline, const cv::Mat &last_bgr)
+void AzureEyeModel::cleanup(cv::GStreamingCompiled &pipeline, const cv::Mat &last_bgr, int64_t last_timestamp)
 {
     this->restarting = false;
 
     util::put_text(last_bgr, "Loading Model");
-    rtsp::update_data_result(last_bgr);
+    rtsp::update_data_result(last_bgr, last_timestamp);
 }
 
 void AzureEyeModel::handle_h264_output(cv::optional<std::vector<uint8_t>> &out_h264, const cv::optional<int64_t> &out_h264_ts,
@@ -480,7 +480,9 @@ void AzureEyeModel::handle_new_inference_for_time_alignment(int64_t inference_ts
 
     // Find all the frames that are either time-aligned or older than the time-aligned frame
     // (and remove them from the buffer)
-    auto frames_to_draw_on = this->timestamped_frames.get_best_match_and_older(inference_ts);
+    std::vector<cv::Mat> frames_to_draw_on;
+    std::vector<int64_t> timestamps;
+    this->timestamped_frames.get_best_match_and_older(inference_ts, frames_to_draw_on, timestamps);
 
     // Draw our bounding boxes (or masks, or whatever) over each one and release them in a batch to the RTSP server
     for (auto &frame : frames_to_draw_on)
@@ -495,7 +497,7 @@ void AzureEyeModel::handle_new_inference_for_time_alignment(int64_t inference_ts
     #ifdef DEBUG_TIME_ALIGNMENT
         util::log_debug("New Inference: Sending " + std::to_string(frames_to_draw_on.size()) + " to RTSP stream");
     #endif
-    rtsp::update_data_result(frames_to_draw_on);
+    rtsp::update_data_result(frames_to_draw_on, timestamps);
 }
 
 cv::gapi::mx::Camera::Mode AzureEyeModel::get_resolution() const

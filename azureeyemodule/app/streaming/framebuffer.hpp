@@ -5,6 +5,7 @@
 
 // Standard library includes
 #include <atomic>
+#include <deque>
 #include <thread>
 
 // Local includes
@@ -60,7 +61,8 @@ public:
      * @param fps: The frames per second at which to update the `get` frame. GStreamer RTSP server will call
      *             the `get()` method at some frames per second, which may be different than this, but if the
      *             FPS values differ, you might send duplicate frames or you might not send frames as often as
-     *             you could. Best to make sure this value remains about the same as the RTSP server's.
+     *             you could. This is the initial value we use, but we internally adjust this to match the
+     *             average rate at which frames are dumped into the buffer.
      */
     explicit FrameBuffer(size_t max_length, int fps);
 
@@ -76,17 +78,17 @@ public:
     cv::Mat get(const Resolution &resolution);
 
     /** Put a new frame into the buffer. */
-    void put(const cv::Mat &frame);
+    void put(const cv::Mat &frame, int64_t timestamp);
 
     /** Get the number of frames we still have room for before we start overwriting old ones. */
     size_t room() const;
 
-    /** Set the rate at which we update the `get` frame. */
-    void set_fps(int fps);
-
 private:
     /** The internal container we use for holding the frames. */
     circbuf::CircularBuffer<cv::Mat> circular_buffer;
+
+    /** The last N timestamps. We use these to calculate the rate frames are coming in. */
+    std::deque<int64_t> last_n_timestamps;
 
     /** This is the latest frame that we have sent (or a default if we haven't sent any yet). */
     cv::Mat cached_frame;
@@ -94,7 +96,7 @@ private:
     /** Lock to guard access to the cached frame, which gets read from whatever thread, and written from our internal thread. */
     std::mutex cached_frame_mutex;
 
-    /** The frames per second that we update our cached frame. */
+    /** The frames per second that we update our cached frame. We adjust this value over time to match the rate at which we are getting frames. */
     std::atomic<int> fps;
 
     /** The FPS thread. This thread updates the `get` frame `fps` times per second. */

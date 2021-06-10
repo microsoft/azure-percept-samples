@@ -141,6 +141,7 @@ bool ClassificationModel::pull_data(cv::GStreamingCompiled &pipeline)
     std::vector<int> last_labels;
     std::vector<float> last_confidences;
     cv::Mat last_bgr;
+    int64_t last_bgr_timestamp;
 
     // If the user wants to record a video, we open the video file.
     std::ofstream ofs;
@@ -156,12 +157,12 @@ bool ClassificationModel::pull_data(cv::GStreamingCompiled &pipeline)
     {
         this->handle_h264_output(out_h264, out_h264_ts, out_h264_seqno, ofs);
         this->handle_inference_output(out_nn_ts, out_nn_seqno, out_labels, out_confidences, last_labels, last_confidences);
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_labels, last_confidences);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_labels, last_confidences);
 
         if (restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }
@@ -170,7 +171,7 @@ bool ClassificationModel::pull_data(cv::GStreamingCompiled &pipeline)
     return true;
 }
 
-void ClassificationModel::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr,
+void ClassificationModel::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp,
                                             const std::vector<int> &last_labels, const std::vector<float> &last_confidences)
 {
     if (!out_bgr.has_value())
@@ -183,6 +184,7 @@ void ClassificationModel::handle_bgr_output(cv::optional<cv::Mat> &out_bgr, cons
 
     // Cache this most recent frame.
     last_bgr = *out_bgr;
+    last_bgr_timestamp = *bgr_ts;
 
     // Mark up this frame with our preview function.
     cv::Mat marked_up_bgr;

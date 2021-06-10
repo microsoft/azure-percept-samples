@@ -57,11 +57,12 @@ protected:
      *                 which case we immediately return from this method.
      * @param out_bgr_ts: The timestamp of out_bgr.
      * @param last_bgr: We cache out_bgr into this for use in other methods.
+     * @param last_bgr_timestamp: We cache bgr_ts in this value.
      * @param last_boxes: The latest neural network output bounding box(es) to use in marking up the RTSP stream if we are not time aligning.
      * @param last_labels: The latest neural network output label(s) to use in marking up the RTSP stream if we are not time aligning.
      * @param last_confidences: The latest neural network output confidence(s) to use in marking up the RTSP stream if we are not time aligning.
      */
-    virtual void handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr, const std::vector<cv::Rect> &last_boxes, const std::vector<int> &last_labels, const std::vector<float> &last_confidences);
+    virtual void handle_bgr_output(cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp, const std::vector<cv::Rect> &last_boxes, const std::vector<int> &last_labels, const std::vector<float> &last_confidences);
 
     /**
      * The G-API graph in the object detection subclasses is split into three branches: a branch that handles the H.264 encoding, a branch that

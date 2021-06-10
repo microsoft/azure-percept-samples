@@ -151,6 +151,7 @@ bool OCRModel::pull_data(cv::GStreamingCompiled &pipeline)
     cv::Mat last_bgr;
     std::vector<cv::RotatedRect> last_rcs;
     std::vector<std::string> last_text;
+    int64_t last_bgr_timestamp;
 
     // If the user wants to record a video, we open the video file.
     std::ofstream ofs;
@@ -164,12 +165,12 @@ bool OCRModel::pull_data(cv::GStreamingCompiled &pipeline)
     {
         this->handle_h264_output(out_h264, out_h264_ts, out_h264_seqno, ofs);
         this->handle_inference_output(out_nn_ts, out_txtrcs, last_rcs, out_text, last_text);
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_rcs, last_text);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_rcs, last_text);
 
         if (this->restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }
@@ -178,7 +179,7 @@ bool OCRModel::pull_data(cv::GStreamingCompiled &pipeline)
     return true;
 }
 
-void OCRModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr,
+void OCRModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &out_bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp,
                                  const std::vector<cv::RotatedRect> &last_rcs, const std::vector<std::string> &last_text)
 {
     if (!out_bgr.has_value())
@@ -191,6 +192,7 @@ void OCRModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv:
 
     // Now that we got a useful value, let's cache this one as the most recent.
     last_bgr = *out_bgr;
+    last_bgr_timestamp = *out_bgr_ts;
 
     // Mark up this frame with our preview function.
     cv::Mat marked_up_bgr;

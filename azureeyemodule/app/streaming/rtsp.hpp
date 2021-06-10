@@ -54,12 +54,12 @@ void set_stream_params(const StreamType &type, const Resolution &resolution, int
 void take_snapshot(const StreamType &type);
 
 /** Update the RGB frame that we display in the raw RTSP stream. */
-void update_data_raw(const cv::Mat &mat);
-void update_data_raw(const std::vector<cv::Mat> &mats);
+void update_data_raw(const cv::Mat &mat, int64_t timestamp);
+void update_data_raw(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps);
 
 /** Update the RGB frame that we display in the result RTSP stream. */
-void update_data_result(const cv::Mat &mat);
-void update_data_result(const std::vector<cv::Mat> &mats);
+void update_data_result(const cv::Mat &mat, int64_t timestamp);
+void update_data_result(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps);
 
 /** Update the H.264 data that we display in the Raw H.264 stream. */
 void update_data_h264(const H264 &frame);

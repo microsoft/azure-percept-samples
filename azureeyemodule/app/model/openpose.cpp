@@ -163,6 +163,7 @@ bool OpenPoseModel::pull_data(cv::GStreamingCompiled &pipeline)
     // Because each node is asynchronusly filled, we cache them whenever we get them.
     std::vector<pose::HumanPose> last_poses;
     cv::Mat last_bgr;
+    int64_t last_bgr_timestamp;
 
     // If the user wants to record a video, we open the video file.
     std::ofstream ofs;
@@ -176,12 +177,12 @@ bool OpenPoseModel::pull_data(cv::GStreamingCompiled &pipeline)
     {
         this->handle_h264_output(out_h264, out_h264_ts, out_h264_seqno, ofs);
         this->handle_inference_output(out_nn_ts, out_nn_seqno, out_poses, last_poses);
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_poses);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_poses);
 
         if (this->restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }
@@ -190,7 +191,7 @@ bool OpenPoseModel::pull_data(cv::GStreamingCompiled &pipeline)
     return true;
 }
 
-void OpenPoseModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts,
+void OpenPoseModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, int64_t &last_bgr_timestamp,
                                       cv::Mat &last_bgr, const std::vector<pose::HumanPose> &last_poses)
 {
     // If out_bgr does not have anything in it, we didn't get anything from the G-API graph at this iteration.

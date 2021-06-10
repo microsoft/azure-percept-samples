@@ -128,6 +128,7 @@ bool BinaryUnetModel::pull_data(cv::GStreamingCompiled &pipeline)
     // Because each node is asynchronusly filled, we cache them whenever we get them.
     cv::Mat last_bgr;
     cv::Mat last_mask;
+    int64_t last_bgr_timestamp;
 
     // If the user wants to record a video, we open the video file.
     std::ofstream ofs;
@@ -145,12 +146,12 @@ bool BinaryUnetModel::pull_data(cv::GStreamingCompiled &pipeline)
     {
         this->handle_h264_output(out_h264, out_h264_ts, out_h264_seqno, ofs);
         this->handle_inference_output(out_mask, out_nn_ts, last_mask);
-        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_mask);
+        this->handle_bgr_output(out_bgr, out_bgr_ts, last_bgr, last_bgr_timestamp, last_mask);
 
         if (this->restarting)
         {
             // We've been interrupted
-            this->cleanup(pipeline, last_bgr);
+            this->cleanup(pipeline, last_bgr, last_bgr_timestamp);
             return false;
         }
     }
@@ -159,7 +160,7 @@ bool BinaryUnetModel::pull_data(cv::GStreamingCompiled &pipeline)
     return true;
 }
 
-void BinaryUnetModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, const cv::Mat &last_mask)
+void BinaryUnetModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, cv::Mat &last_bgr, int64_t &last_bgr_timestamp, const cv::Mat &last_mask)
 {
     // If out_bgr does not have anything in it, we didn't get anything from the G-API graph at this iteration.
     if (!out_bgr.has_value())
@@ -172,6 +173,7 @@ void BinaryUnetModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, co
 
     // Now that we got a useful value, let's cache this one as the most recent.
     last_bgr = *out_bgr;
+    last_bgr_timestamp = *bgr_ts;
 
     // Mark up this frame with our preview function.
     cv::Mat marked_up_bgr;
