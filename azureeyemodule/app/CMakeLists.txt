@@ -62,6 +62,10 @@ file (GLOB STREAMING_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/streaming/*.h*)
 file (GLOB UTIL_SRC ${CMAKE_CURRENT_SOURCE_DIR}/util/*.c*)
 file (GLOB UTIL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/util/*.h*)
 
+##### REMOVE ME #############
+add_definitions(-DDEBUG_TIME_ALIGNMENT)
+##################################
+
 # This is our target
 add_executable(${APP_NAME}
   ${MAIN_SRC} ${MAIN_HEADERS}

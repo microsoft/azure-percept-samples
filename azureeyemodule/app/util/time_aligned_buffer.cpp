@@ -78,6 +78,10 @@ void TimeAlignedBuffer::remove_best_match_and_older(int64_t best_match_ts, std::
     }
     assert(amount <= this->index);
     this->index -= amount;
+
+    #ifdef DEBUG_TIME_ALIGNMENT
+        util::log_debug("New Inference: Found " + std::to_string(best_and_older.size()) + " frames. Now have " + std::to_string(this->size()) + " frames left.");
+    #endif
 }
 
 void TimeAlignedBuffer::find_oldest_and_best_matching(int64_t timestamp, cv::Mat &oldest_frame, int64_t &oldest_ts, int64_t &best_match_ts) const
@@ -158,10 +162,6 @@ void TimeAlignedBuffer::get_best_match_and_older(int64_t timestamp, std::vector<
         // If the oldest frame occurs before this inference, then the frame we are inferencing on
         // is somewhere in our buffer. Search through to find it and all older frames.
         this->remove_best_match_and_older(best_match_ts, out_frames, out_timestamps);
-
-        #ifdef DEBUG_TIME_ALIGNMENT
-            util::log_debug("New Inference: Found " + std::to_string(best_and_older.size()) + " frames. Now have " + std::to_string(this->size()) + " frames left.");
-        #endif
         return;
     }
 }
