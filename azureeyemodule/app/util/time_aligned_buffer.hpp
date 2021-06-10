@@ -33,7 +33,7 @@ public:
     void put(const timestamped_frame_t &frame_and_ts);
 
     /** Removes the best matching frame and all older ones and returns them as a vector. If no frames in buffer, we return the default one or the last one we returned. */
-    void get_best_match_and_older(int64_t timestamp, std::vector<cv::Mat> &out_frames, std::vector<cv::Mat> &out_timestamps);
+    void get_best_match_and_older(int64_t timestamp, std::vector<cv::Mat> &out_frames, std::vector<int64_t> &out_timestamps);
 
     /** Returns the current number of items in the buffer. */
     size_t size() const;
@@ -58,7 +58,7 @@ private:
     void find_oldest_and_best_matching(int64_t timestamp, cv::Mat &oldest_frame, int64_t &oldest_ts, int64_t &best_match_ts) const;
 
     /** Find and remove the best matching frames and timestamps, and all older ones. */
-    void remove_best_match_and_older(int64_t best_match_ts, std::vector<cv::Mat> &best_and_older, std::vector<int64_t> &best_and_older_ts)
+    void remove_best_match_and_older(int64_t best_match_ts, std::vector<cv::Mat> &best_and_older, std::vector<int64_t> &best_and_older_ts);
 };
 
 } // namespace timebuf

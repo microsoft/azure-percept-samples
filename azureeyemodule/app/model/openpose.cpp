@@ -191,8 +191,8 @@ bool OpenPoseModel::pull_data(cv::GStreamingCompiled &pipeline)
     return true;
 }
 
-void OpenPoseModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts, int64_t &last_bgr_timestamp,
-                                      cv::Mat &last_bgr, const std::vector<pose::HumanPose> &last_poses)
+void OpenPoseModel::handle_bgr_output(const cv::optional<cv::Mat> &out_bgr, const cv::optional<int64_t> &bgr_ts,
+                                      cv::Mat &last_bgr, int64_t &last_bgr_timestamp, const std::vector<pose::HumanPose> &last_poses)
 {
     // If out_bgr does not have anything in it, we didn't get anything from the G-API graph at this iteration.
     if (!out_bgr.has_value())

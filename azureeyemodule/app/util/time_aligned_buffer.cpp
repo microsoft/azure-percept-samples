@@ -113,7 +113,7 @@ void TimeAlignedBuffer::find_oldest_and_best_matching(int64_t timestamp, cv::Mat
     assert(best_match_ts != 0);
 }
 
-void TimeAlignedBuffer::get_best_match_and_older(int64_t timestamp, std::vector<cv::Mat> &out_frames, std::vector<cv::Mat> &out_timestamps)
+void TimeAlignedBuffer::get_best_match_and_older(int64_t timestamp, std::vector<cv::Mat> &out_frames, std::vector<int64_t> &out_timestamps)
 {
     // If there is nothing in the buffer yet, let's return a default value.
     if (this->timestamped_frames.size() == 0)
@@ -130,7 +130,7 @@ void TimeAlignedBuffer::get_best_match_and_older(int64_t timestamp, std::vector<
     cv::Mat oldest_frame;
     int64_t oldest_ts;
     int64_t best_match_ts;
-    this->find_oldest_and_best_matching(oldest_frame, oldest_ts, best_match_ts);
+    this->find_oldest_and_best_matching(timestamp, oldest_frame, oldest_ts, best_match_ts);
 
     #ifdef DEBUG_TIME_ALIGNMENT
         util::log_debug("New Inference: Matched " + util::timestamp_to_string(timestamp) + " with " + util::timestamp_to_string(best_match_ts));

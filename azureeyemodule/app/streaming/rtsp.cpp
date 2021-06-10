@@ -602,6 +602,8 @@ void* gst_rtsp_server_thread(void *unused)
 
 static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, const std::vector<int64_t> &timestamps, FrameBuffer &buffer)
 {
+    assert(mats.size() == timestamps.size());
+
     // If we have too many frames to put into the buffer,
     // we will overflow our buffer, leading to jumps in time.
     // But if we don't deliver enough, the stream will pause
@@ -642,9 +644,9 @@ static void add_bunch_of_frames(const std::vector<cv::Mat> &mats, const std::vec
     else
     {
         // Put them all in
-        for (const auto &mat : mats)
+        for (size_t i = 0; i < mats.size(); i++)
         {
-            buffer.put(mat);
+            buffer.put(mats.at(i), timestamps.at(i));
         }
     }
 }
@@ -734,13 +736,11 @@ void set_stream_params(const StreamType &type, int fps)
     switch (type)
     {
         case StreamType::RAW:
-            raw_buffer.set_fps(fps);
             raw_udp_context.fps = fps;
             raw_tcp_context.fps = fps;
             util::log_info("Raw RTSP Stream's FPS changed to " + std::to_string(fps));
             break;
         case StreamType::RESULT:
-            result_buffer.set_fps(fps);
             result_udp_context.fps = fps;
             result_tcp_context.fps = fps;
             util::log_info("Result RTSP Stream's FPS changed to " + std::to_string(fps));
