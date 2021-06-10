@@ -97,7 +97,7 @@ private:
     std::mutex cached_frame_mutex;
 
     /** The frames per second that we update our cached frame. We adjust this value over time to match the rate at which we are getting frames. */
-    std::atomic<int> fps;
+    std::atomic<double> fps;
 
     /** The FPS thread. This thread updates the `get` frame `fps` times per second. */
     std::thread fps_thread;
