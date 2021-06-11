@@ -108,8 +108,7 @@ void FrameBuffer::put(const cv::Mat &frame, int64_t timestamp)
         double total_time_s = (double)total_time_ns / (double)1E9;
         double new_fps = (double)(this->last_n_timestamps.size() - 1) / (double)total_time_s;
         assert(new_fps > 0.0);
-        //this->fps.exchange(new_fps);
-        this->fps.exchange(30);
+        this->fps.exchange(new_fps);
 
         #ifdef DEBUG_TIME_ALIGNMENT
             util::log_debug("FPS: " + std::to_string(new_fps));
