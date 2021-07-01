@@ -45,7 +45,7 @@ RUN rpm -i /rpm/gstreamer1-1.14.0-3.el8.${ARCH}.rpm && \
     rpm -i /rpm/libwebp-1.0.0-1.el8.${ARCH}.rpm && \
     rpm -i --nodeps /rpm/gstreamer1-plugins-bad-free-1.16.1-1.el8.${ARCH}.rpm && \
     # gstreamer1-rtsp-server
-    rpm -i /rpm/gstreamer1-rtsp-server-1.14.0-1.fc28.${ARCH}.rpm && \
+    rpm -i /rpm/gstreamer1-rtsp-server-1.14.0-1.fc28.${ARCH}.rpm && \															   
     rpm -i --nodeps /rpm/gstreamer1-devel-1.14.0-3.el8.${ARCH}.rpm && \
     rpm -i --nodeps /rpm/gstreamer1-plugins-base-devel-1.14.0-4.el8.${ARCH}.rpm && \
     rpm -i --nodeps /rpm/gstreamer1-rtsp-server-devel-1.14.0-1.fc28.${ARCH}.rpm && \

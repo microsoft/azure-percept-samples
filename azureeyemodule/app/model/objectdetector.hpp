@@ -28,6 +28,7 @@ class ObjectDetector : public AzureEyeModel
 public:
     ObjectDetector(const std::string &labelfpath, const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution);
     virtual ~ObjectDetector();
+    const std::string VIDEO_PREFIX = "video:";
 
 protected:
     /** Path to the label file. */
@@ -94,6 +95,8 @@ protected:
 
     /** Pull data through the given pipeline. Returns true if we run out of frames, false if we have been interrupted. Otherwise runs forever. */
     virtual bool pull_data(cv::GStreamingCompiled &pipeline);
+
+    virtual bool pull_data_uvc_video(cv::GStreamingCompiled &pipeline);
 
 private:
     /** Marks up the given rgb with the given labels, bounding boxes, and confidences. */

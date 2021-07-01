@@ -46,7 +46,8 @@ const std::string keys =
 "{ p parser    | ssd100 | Parser kind required for input model. Possible values: ssd100, ssd200, yolo, classification, s1, openpose, onnxssd, faster-rcnn-resnet50, unet, ocr }"
 "{ s size      | native | Output video resolution. Possible values: native, 1080p, 720p }"
 "{ t timealign | false  | Align the RTSP result frames with their corresponding neural network outputs in time }"
-"{ fps         | 10     | Output video frame rate. }";
+"{ fps         | 10     | Output video frame rate. }"
+"{ i input     |        | Source of input frames. Inbox MIPI camera attached to Eye SoM by default. Possible value: uvc, video:<video path in the container> }";
 
 const std::map<rtsp::Resolution, cv::gapi::mx::Camera::Mode> modes = {
     {rtsp::Resolution::NATIVE, cv::gapi::mx::Camera::MODE_NATIVE},
@@ -134,7 +135,8 @@ static void interrupt(int sig)
 }
 
 static void determine_model_type(const std::string &labelfile, const std::vector<std::string> &modelfiles, const std::string &mvcmd,
-                                 const std::string &videofile, const model::parser::Parser &parser_type, const cv::gapi::mx::Camera::Mode &resolution, bool quit_on_failure)
+                                 const std::string inputsource, const std::string &videofile, const model::parser::Parser &parser_type, 
+                                 const cv::gapi::mx::Camera::Mode &resolution, bool quit_on_failure)
 {
     the_model = nullptr;
     switch (parser_type)
@@ -154,7 +156,7 @@ static void determine_model_type(const std::string &labelfile, const std::vector
         case model::parser::Parser::SSD100: // fall-through
         case model::parser::Parser::SSD200: // fall-through
         case model::parser::Parser::DEFAULT:
-            the_model = new model::SSDModel(labelfile, modelfiles, mvcmd, videofile, resolution);
+            the_model = new model::SSDModel(labelfile, modelfiles, mvcmd, inputsource, videofile, resolution);
             break;
         case model::parser::Parser::YOLO:
             the_model = new model::YoloModel(labelfile, modelfiles, mvcmd, videofile, resolution);
@@ -187,7 +189,7 @@ static void determine_model_type(const std::string &labelfile, const std::vector
 }
 
 /** This function should update the_model to be whatever we've been told to update to via the update callback. */
-static void load_new_model(const std::string &mvcmd, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution, bool quit_on_failure)
+static void load_new_model(const std::string &mvcmd, const std::string inputsource, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution, bool quit_on_failure)
 {
     std::string labelfile = "";
     std::vector<std::string> modelfiles;
@@ -224,7 +226,7 @@ static void load_new_model(const std::string &mvcmd, const std::string &videofil
     }
 
     // Fill in the model values based on the type
-    determine_model_type(labelfile, modelfiles, mvcmd, videofile, modeltype, resolution, quit_on_failure);
+    determine_model_type(labelfile, modelfiles, mvcmd, inputsource, videofile, modeltype, resolution, quit_on_failure);
 }
 
 /** This function stops the MyriadX pipeline and wait for 2 seconds as Intel suggested */
@@ -276,6 +278,7 @@ int main(int argc, char** argv)
     auto quit_on_failure = cmd.get<bool>("quit");
     auto timealign = cmd.get<bool>("timealign");
     auto fps = cmd.get<int>("fps");
+    auto inputsource = cmd.get<std::string>("input");
 
     // Sanity check resolution is allowed
     if (!rtsp::is_valid_resolution(str_resolution))
@@ -315,7 +318,7 @@ int main(int argc, char** argv)
     }
 
     // Fill in `the_model` with the appropriate type of model
-    determine_model_type(labelfile, modelfiles, mvcmd, videofile, parser_type, resolution_camera_mode, quit_on_failure);
+    determine_model_type(labelfile, modelfiles, mvcmd, inputsource, videofile, parser_type, resolution_camera_mode, quit_on_failure);
 
     // See if the device is already opened, if not, open it and authenticate
     bool opened_usb_device = device::open_device();
@@ -376,7 +379,7 @@ int main(int argc, char** argv)
         the_model = nullptr;
 
         // Load a new model
-        load_new_model(mvcmd, videofile, resolution_camera_mode, quit_on_failure);
+        load_new_model(mvcmd, inputsource, videofile, resolution_camera_mode, quit_on_failure);
 
         // Update data collection settings
         update_data_collection_params(data_collection_enabled, data_collection_interval_sec);

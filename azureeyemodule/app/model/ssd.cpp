@@ -12,6 +12,7 @@
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/gapi/render.hpp>
 
 // Local includes
 #include "ssd.hpp"
@@ -20,15 +21,35 @@
 #include "../util/helper.hpp"
 #include "../util/labels.hpp"
 
+namespace custom {
+
+using GDetections = cv::GArray<cv::Rect>;
+using GPrims      = cv::GArray<cv::gapi::wip::draw::Prim>;
+
+G_API_OP(BBoxes, <GPrims(GDetections)>, "sample.custom.b-boxes") {
+    static cv::GArrayDesc outMeta(const cv::GArrayDesc &) {
+        return cv::empty_array_desc();
+    }
+};
+
+GAPI_OCV_KERNEL(OCVBBoxes, BBoxes) {
+    // Converts the rectangles into G-API's rendering primitives
+    static void run(const std::vector<cv::Rect> &in_face_rcs,
+                          std::vector<cv::gapi::wip::draw::Prim> &out_prims) {
+    }
+};
+
+} // namespace custom
 
 namespace model {
 
 /** An SSD network takes a single input and outputs a single output (which we will parse into boxes, labels, and confidences) */
 G_API_NET(SSDNetwork, <cv::GMat(cv::GMat)>, "ssd-network");
 
-SSDModel::SSDModel(const std::string &labelfpath, const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution)
+SSDModel::SSDModel(const std::string &labelfpath, const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string inputsource, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution)
     : ObjectDetector{ labelfpath, modelfpaths, mvcmd, videofile, resolution }
 {
+    this->inputsource = inputsource;
 }
 
 void SSDModel::load_default()
@@ -55,14 +76,30 @@ void SSDModel::run(cv::GStreamingCompiled *pipeline)
 
         // Log some metadata.
         this->log_parameters();
+        bool ran_out_naturally;
 
-        // Build the camera pipeline with G-API
-        *pipeline = this->compile_cv_graph();
-        util::log_info("starting the pipeline...");
-        pipeline->start();
+        if ((this->inputsource == "uvc") || (this->inputsource.rfind(this->VIDEO_PREFIX, 0) == 0)) 
+        {
+            // Build the camera pipeline with G-API
+            *pipeline = this->compile_cv_graph_uvc_video();
+            util::log_info("starting the pipeline with " + this->inputsource);
+            pipeline->start();
 
-        // Pull data through the pipeline
-        bool ran_out_naturally = this->pull_data(*pipeline);
+            // Pull data through the pipeline
+            ran_out_naturally = this->pull_data_uvc_video(*pipeline);
+        } 
+        else 
+        {
+            // Build the camera pipeline with G-API
+            *pipeline = this->compile_cv_graph();
+            util::log_info("starting the pipeline...");
+            pipeline->start();
+
+            // Pull data through the pipeline
+            ran_out_naturally = this->pull_data(*pipeline);
+
+        }
+        
         if (!ran_out_naturally)
         {
             break;
@@ -125,6 +162,60 @@ cv::GStreamingCompiled SSDModel::compile_cv_graph() const
 
     // Specify the Percept DK's camera as the input to the pipeline.
     pipeline.setSource(cv::gapi::wip::make_src<cv::gapi::mx::Camera>());
+
+    return pipeline;
+}
+
+cv::GStreamingCompiled SSDModel::compile_cv_graph_uvc_video() const
+{
+    // The input node of the G-API pipeline. This will be filled in, one frame at time.
+    cv::GMat in;
+    cv::GMat bgr = in;
+
+    // Here's where we actually run our neural network. It runs on the VPU.
+    cv::GMat nn = cv::gapi::infer<SSDNetwork>(bgr);
+
+    // Get some useful metadata.
+    cv::GOpaque<int64_t> nn_seqno = cv::gapi::streaming::seqNo(nn);
+    cv::GOpaque<int64_t> ts    = cv::gapi::streaming::timestamp(nn);
+    cv::GOpaque<cv::Size> sz = cv::gapi::streaming::size(bgr);
+
+    // Here's where we post-process our network's outputs into bounding boxes, IDs, and confidences.
+    cv::GArray<cv::Rect> objs;
+    cv::GArray<int> tags;
+    cv::GArray<float> confidences;
+    std::tie(objs, tags, confidences) = cv::gapi::streaming::parseSSDWithConf(nn, sz);
+    auto rendered = cv::gapi::wip::draw::render3ch(bgr, custom::BBoxes::on(objs));
+    auto graph_ins = cv::GIn(in);
+    auto graph_outs = cv::GOut(objs, tags, confidences, sz, nn_seqno, ts);
+    graph_outs += cv::GOut(rendered);
+    auto graph = cv::GComputation(std::move(graph_ins), std::move(graph_outs));
+
+    // Pass the actual neural network blob file into the graph. We assume we have a modelfiles of at least length 1.
+    CV_Assert(this->modelfiles.size() >= 1);
+    auto networks = cv::gapi::networks(cv::gapi::mx::Params<SSDNetwork>{this->modelfiles.at(0)});
+    // Here we wrap up all the kernels (the implementations of the G-API ops) that we need for our graph.
+    auto kernels = cv::gapi::combine(cv::gapi::mx::kernels(), cv::gapi::kernels<custom::OCVBBoxes, cv::gapi::streaming::GOCVParseSSDWithConf>());
+    // Compile the graph in streamnig mode; set all the parameters; feed the firmware file into the VPU.
+    auto pipeline = graph.compileStreaming(cv::compile_args(networks, kernels, cv::gapi::mx::mvcmdFile{ this->mvcmd }));
+
+    //if find VIDEO_PREFIX from inputsource, continue with a video file
+    if (this->inputsource.rfind(this->VIDEO_PREFIX, 0) == 0) 
+    {
+        std::string video_file_path = this->inputsource.substr(this->VIDEO_PREFIX.size(), this->inputsource.size());
+        util::log_info("Input source is a video file with path: " + video_file_path);
+        if (!util::file_exists(video_file_path))
+        {
+            util::log_error("The video file doesn't exist.");
+        }
+        pipeline.setSource<cv::gapi::wip::GCaptureSource>(video_file_path);
+    } 
+    //else continue as uvc camera, video0 as default value
+    else 
+    {
+        util::log_info("Input source is a uvc camera (video0 as default value)");
+        pipeline.setSource<cv::gapi::wip::GCaptureSource>(0);
+    }
 
     return pipeline;
 }

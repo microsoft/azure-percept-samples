@@ -810,6 +810,74 @@ bool ObjectDetector::pull_data(cv::GStreamingCompiled &pipeline)
 }
 ```
 
+### Using UVC(USB Video Class) camera as input source
+
+Be default, the Azure Percept's Camera attached to Eye SoM is used as input source.
+
+We can also use a UVC camera as input source. 
+
+A generic UVC camera that outputs raw format (like RGB and YUV) is supported.
+Validated on Logitech B525 HD, 720P, 30 fps.
+
+1. Build the dockerfile and pull it as you did which was mentioned in earlier sections.
+1. Plug in your UVC camera. In SSH, run command *sudo ls /dev/video**. You should see at least one device (maybe 2 or even more). By default it should be video0.
+1. Now run the Docker container like this:
+    ```
+    docker run --rm \
+               -v /dev/bus/usb:/dev/bus/usb \
+               --device=/dev/video0 \
+               -it \
+               --device-cgroup-rule='c 189:* rmw' \
+               -p 8554:8554 \
+               <the docker image you just built> \
+               /app/inference --input=uvc --fps=30
+    ``` 
+    where 
+    * --device=/dev/video0 allows the container to access your uvc camera video0.
+    * --input=uvc is the parameter for inference app which will then use uvc camera as input source.
+    * --fps=30 specifies the input fps from the uvc camera.
+1. Once it's started, you will see the inference results and the video stream with overlay bounding boxes and labels.
+
+---
+**NOTE**
+
+UVC camera is only enabled in object detection model as an example.
+Please follow the sample codes to enable more models if needed.
+
+---
+
+### Using pre-recorded video file as input source
+
+Pre-recorded video file as input source in also supported. Supported codec is H.264 and file format includes but not limited to *.mp4, *.mkv.
+1. Assume the docker image was ready.
+1. Prepare an H.264 pre-recorded video file and store in somewhere you want on the host, for example, /video/homes_00425.mkv.
+   You can download a sample video from https://abhilashavastorage.blob.core.windows.net/video/homes_00425.mkv
+1. Now run the Docker container like this:
+    ```
+    docker run --rm \
+               -v /dev/bus/usb:/dev/bus/usb \
+               -v /video:/video \
+               -it \
+               --device-cgroup-rule='c 189:* rmw' \
+               -p 8554:8554 \
+               <the docker image you just built> \
+               /app/inference --input=video:/video/homes_00425.mkv --fps=30
+    ``` 
+    where
+    * -v /video:/video is to bind the /video folder on your host to the folder with same name in container.
+    * --input=video:[video file path] is to specify the pre-recorded video file path in the container
+    * --fps=30 is the input video file fps.
+---
+**Known issue**
+
+Hardware codec is not yet enabled in Mariner OS.
+When using the pre-recorded video as input source, it will first decode to raw frame before sending to the inference pipeline.
+And since the hardware codec is not yet enabled, it will use CPU to decode.
+Thus the overall performance is constrained by the CPU decoding process.
+As a result, even we specify the input fps as 30, you will see that the output video stream is only around 20fps.
+
+---
+
 ## The Dockerfile
 
 You can see that in this directory, we have a `Dockerfile.arm64v8`, which is used for building the azureeyemodule.

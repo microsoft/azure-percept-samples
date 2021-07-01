@@ -11,6 +11,7 @@
 #include <opencv2/gapi/infer.hpp>
 #include <opencv2/gapi/streaming/desync.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/gapi/streaming/cap.hpp>
 
 // Local includes
 #include "objectdetector.hpp"
@@ -36,7 +37,7 @@ public:
      * @param videofile:   If we pass a non-empty string here, the model will record frames to a file at this location as a .mp4.
      * @param resolution:  The resolution mode to put the camera in.
      */
-    SSDModel(const std::string &labelfpath, const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution);
+    SSDModel(const std::string &labelfpath, const std::vector<std::string> &modelfpaths, const std::string &mvcmd, const std::string inputsource, const std::string &videofile, const cv::gapi::mx::Camera::Mode &resolution);
 
     /**
      * The SSD model acts as our default model in case we don't get direction
@@ -48,11 +49,15 @@ public:
     void run(cv::GStreamingCompiled* pipeline) override;
 
 private:
-    /** Compile the pipeline graph for SSD. */
+    /** Compile the pipeline graph for SSD when MIPI camera is input source. */
     cv::GStreamingCompiled compile_cv_graph() const;
+
+    /** Compile the pipeline graph for SSD when either uvc camera or video file is input source. The steps inside are slightly different from the inbox MIPI camera */
+    cv::GStreamingCompiled compile_cv_graph_uvc_video() const;
 
     /** Print out all the model's meta information. */
     void log_parameters() const;
+    std::string inputsource;
 };
 
 } // namespace model
