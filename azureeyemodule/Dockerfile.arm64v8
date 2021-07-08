@@ -82,4 +82,11 @@ RUN cd /app && \
     rm -rf /app/*.h* && \
     rm -rf /app/*.txt
 
+# Add a less priveleged user to run the app
+RUN useradd -s /sbin/nologin azureuser \
+    && usermod -aG users azureuser \
+    && chown -R azureuser /app \
+    && chmod +x /app
+
+USER azureuser
 CMD ["/bin/bash", "-c", "./app/inference"]
